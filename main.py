@@ -3,6 +3,7 @@ import sys
 import threading
 from ui.cli_handler import CLIHandler
 from ui.quick_input import QuickInputWindow
+from managers.reminder_manager import ReminderManager
 from config import GLOBAL_HOTKEY
 
 try:
@@ -26,6 +27,8 @@ def setup_global_hotkey():
 
 def main():
     cli_handler = CLIHandler()
+    reminder_manager = ReminderManager()
+    reminder_manager.start()
     
     parser = argparse.ArgumentParser(description='任务管理工具')
     subparsers = parser.add_subparsers(dest='command', help='可用命令')
@@ -34,7 +37,8 @@ def main():
     add_parser = subparsers.add_parser('add', help='添加任务')
     add_parser.add_argument('content', help='任务内容')
     add_parser.add_argument('-p', '--priority', help='优先级')
-    add_parser.add_argument('-d', '--due-date', help='截止日期 (YYYY-MM-DD)')
+    add_parser.add_argument('-d', '--due-date', help='截止日期 (YYYY-MM-DD HH:MM)')
+    add_parser.add_argument('-r', '--remind', help='提醒时间 (YYYY-MM-DD HH:MM)')
     
     # list命令
     subparsers.add_parser('list', help='列出所有任务')
@@ -47,6 +51,12 @@ def main():
     delete_parser = subparsers.add_parser('delete', help='删除任务')
     delete_parser.add_argument('id', type=int, help='任务ID')
     
+    # today命令 - 显示今日任务摘要
+    subparsers.add_parser('today', help='显示今日任务摘要')
+    
+    # show命令 - 打开任务管理界面
+    subparsers.add_parser('show', help='打开任务管理界面')
+    
     # daemon命令 - 启动后台监听
     subparsers.add_parser('daemon', help='启动后台快捷键监听')
     
@@ -57,13 +67,21 @@ def main():
         return
     
     if args.command == 'add':
-        cli_handler.add_task(args.content, args.priority, args.due_date)
+        task = cli_handler.add_task(args.content, args.priority, args.due_date, args.remind)
+        if task and task.reminder_time:
+            reminder_manager.add_reminder(task)
     elif args.command == 'list':
         cli_handler.list_tasks()
     elif args.command == 'done':
         cli_handler.mark_done(args.id)
     elif args.command == 'delete':
         cli_handler.delete_task(args.id)
+    elif args.command == 'today':
+        cli_handler.show_today_summary()
+    elif args.command == 'show':
+        from ui.task_detail_window import TaskDetailWindow
+        detail_window = TaskDetailWindow()
+        detail_window.show()
     elif args.command == 'daemon':
         if keyboard:
             setup_global_hotkey()
@@ -72,6 +90,7 @@ def main():
                 keyboard.wait()
             except KeyboardInterrupt:
                 print("\n后台监听已停止")
+                reminder_manager.stop()
         else:
             print("无法启动后台监听，请安装keyboard库")
 

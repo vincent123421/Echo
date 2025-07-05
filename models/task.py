@@ -4,12 +4,14 @@ from typing import Optional
 class Task:
     def __init__(self, id: Optional[int] = None, content: str = "", 
                  status: str = "pending", priority: Optional[str] = None,
-                 due_date: Optional[datetime] = None, created_at: Optional[datetime] = None):
+                 due_date: Optional[datetime] = None, reminder_time: Optional[datetime] = None,
+                 created_at: Optional[datetime] = None):
         self.id = id
         self.content = content
         self.status = status
         self.priority = priority
         self.due_date = due_date
+        self.reminder_time = reminder_time
         self.created_at = created_at or datetime.now()
     
     def to_dict(self) -> dict:
@@ -19,6 +21,7 @@ class Task:
             'status': self.status,
             'priority': self.priority,
             'due_date': self.due_date.isoformat() if self.due_date else None,
+            'reminder_time': self.reminder_time.isoformat() if self.reminder_time else None,
             'created_at': self.created_at.isoformat()
         }
     
@@ -33,6 +36,8 @@ class Task:
         
         if data.get('due_date'):
             task.due_date = datetime.fromisoformat(data['due_date'])
+        if data.get('reminder_time'):
+            task.reminder_time = datetime.fromisoformat(data['reminder_time'])
         if data.get('created_at'):
             task.created_at = datetime.fromisoformat(data['created_at'])
             
